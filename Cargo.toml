@@ -1,5 +1,5 @@
 [package]
-name = "kaltCli"
+name = "kalt_cli"
 version = "0.1.0"
 edition = "2021"
 
