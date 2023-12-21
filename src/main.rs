@@ -1,37 +1,28 @@
+use std::fs::File;
+use std::fs;
+use std::io::Write;
 use clap::Parser;
 
 #[derive(Parser)]
 struct Cli {
-    pattern: String,
-    path: std::path::PathBuf,
+    action: String,
+    file_name: String,
+    extension: String,
 }
 
-// Eg: cargo run -- main src/main.rs
-fn main() {
-    // call eg function
-    // eg_function();
+// how to run:
+// cargo run -- screen homeScreen tsx
+// cargo run -- atom homeAtom ts
+// cargo run -- component homeComponent tsx
 
-    // - cargo run -- route src/generated/generic_file.txt
-    // find_pattern_in_file();
-    
-}
 
-#[allow(dead_code)]
-fn find_pattern_in_file() {
+fn main() -> std::io::Result<()> {
     let args = Cli::parse();
-    let content = std::fs::read_to_string(&args.path).expect("could not read file");
-    for line in content.lines() {
-        if line.contains(&args.pattern) {
-            println!("{}", line);
-        }
-    }
-}
+    let formated_file_name = format!("./{}/{}.{}", &args.action, &args.file_name, &args.extension);
+    println!("file name: {}", formated_file_name);
+    let _created_dir = fs::create_dir_all(format!("./{}", &args.action)).unwrap();
 
-#[allow(dead_code)]
-fn eg_function() {
-    /*mut anotation*/
-    let mut a = 'a';
-    println!("{}", a);
-    a = 'b';
-    println!("{}", a);
+    let mut created_file = File::create(formated_file_name)?;
+    created_file.write_all("Hello, world!".as_bytes())?;
+    Ok(())
 }
