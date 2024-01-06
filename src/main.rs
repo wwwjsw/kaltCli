@@ -59,7 +59,8 @@ fn main() -> std::io::Result<()> {
     if file_buf.exists() {
         println!("File exists!")
     } else {
-        let _file = File::create(&file_buf).expect("Unable to create file");
+        let mut _file = File::create(&file_buf).expect("Unable to create file");
+        _file.write_all("Hello, world!".as_bytes()).expect("Unable to write data");
     // file.write_all("Hello, world!".as_bytes())?;
     }
 

@@ -6,6 +6,7 @@ This is early development version. I am currently considering:
 - [x] break code into functions.
 - [x] create any file.
 - [x] verify if path exist before creation.
-- [ ] create any file but check if file exist.
+- [x] create any file but check if file exist.
+- [x] write exemple string to the file.
 - [ ] verify if path exist before creation (look for other solutions and compare if there is a better one).
 - [ ] implement template for `tsx` and `ts`.
