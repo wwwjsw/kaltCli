@@ -38,10 +38,6 @@ fn create_folder(folder: &String) {
     fs::create_dir_all(format!("./{}", folder)).unwrap();
 }
 
-fn check_if_file_exists(filename: &String) -> bool {
-    return fs::metadata(filename).is_ok()
-}
-
 
 fn main() -> std::io::Result<()> {
     let args = Cli::parse();
@@ -60,8 +56,12 @@ fn main() -> std::io::Result<()> {
         println!("folder created");
     }
 
-    let _file = File::create(&file_buf).expect("Unable to create file");
+    if file_buf.exists() {
+        println!("File exists!")
+    } else {
+        let _file = File::create(&file_buf).expect("Unable to create file");
     // file.write_all("Hello, world!".as_bytes())?;
+    }
 
     Ok(())
 }
