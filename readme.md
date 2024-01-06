@@ -1,4 +1,14 @@
-# Roadmap
+## Run 
+`cargo run -- <path> <filename> <extension>`
+
+## Run Example
+`cargo run -- screen homeScreen tsx`
+
+`cargo run -- atom homeAtom ts`
+
+`cargo run -- component homeComponent tsx`
+
+## Roadmap
 
 This is early development version. I am currently considering:
 - [x] Parse 3 arguments `action` and `filename` and `extension`.
