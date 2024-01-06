@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::fs;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 use clap::Parser;
 
 #[derive(Parser)]
@@ -15,14 +16,52 @@ struct Cli {
 // cargo run -- atom homeAtom ts
 // cargo run -- component homeComponent tsx
 
+fn create_file_buf(folder: &String, filename: &String, ext: &String) -> PathBuf {
+    let mut path = PathBuf::new();
+    path.push(folder);
+    path.push(filename);
+    path.set_extension(ext);
+
+
+    return path
+}
+
+fn check_if_folder_exists(folder: &String) -> bool {
+    let folder_path = format!("./{}", folder);
+    let exist_path = fs::metadata(&folder_path).is_ok();
+    println!("exist path: {}", exist_path);
+    return exist_path;
+    // return fs::metadata(format!("./{}", folder)).unwrap().is_file();
+}
+
+fn create_folder(folder: &String) {
+    fs::create_dir_all(format!("./{}", folder)).unwrap();
+}
+
+fn check_if_file_exists(filename: &String) -> bool {
+    return fs::metadata(filename).is_ok()
+}
+
 
 fn main() -> std::io::Result<()> {
     let args = Cli::parse();
-    let formated_file_name = format!("./{}/{}.{}", &args.action, &args.file_name, &args.extension);
-    println!("file name: {}", formated_file_name);
-    let _created_dir = fs::create_dir_all(format!("./{}", &args.action)).unwrap();
+    let [action, file_name, extension] = [args.action, args.file_name, args.extension];
+    
+    let file_buf = create_file_buf(&action, &file_name, &extension);
+    let folder_exists = check_if_folder_exists(&action);
+    // let file_exists = check_if_file_exists(&formated_file_name);
 
-    let mut created_file = File::create(formated_file_name)?;
-    created_file.write_all("Hello, world!".as_bytes())?;
+
+    // create folder if it doesn't exist
+    if folder_exists {
+        println!("folder exists");
+    } else {
+        create_folder(&action);
+        println!("folder created");
+    }
+
+    let _file = File::create(&file_buf).expect("Unable to create file");
+    // file.write_all("Hello, world!".as_bytes())?;
+
     Ok(())
 }
