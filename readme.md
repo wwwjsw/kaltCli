@@ -19,4 +19,4 @@ This is early development version. I am currently considering:
 - [x] create any file but check if file exist.
 - [x] write exemple string to the file.
 - [ ] verify if path exist before creation (look for other solutions and compare if there is a better one).
-- [ ] implement template for `tsx` and `ts`.
+- [ ] implement templates.
