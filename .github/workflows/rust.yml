@@ -1,4 +1,4 @@
-name: Rust CI/CD
+name: Rust CI
 
 on:
   push:
@@ -10,24 +10,15 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: full
 
 jobs:
-  # Job de validação (para PRs e pushes)
-  validate:
+  test:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout código
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-        components: clippy, rustfmt
-    
-    - name: Cache dependências
+    - name: Cache cargo
       uses: actions/cache@v4
       with:
         path: |
@@ -35,144 +26,34 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
     
-    - name: Build de desenvolvimento
-      run: cargo build --verbose
-    
-    - name: Executar testes
-      run: cargo test --verbose -- --nocapture
-    
-    - name: Executar Clippy
-      run: cargo clippy -- -D warnings
-    
-    - name: Verificar formatação
-      run: cargo fmt -- --check
+    - name: Build and test
+      run: |
+        cargo build
+        cargo test
 
-  # Job de build release (só para main e releases)
-  build-release:
-    needs: validate  # Depende do job validate
+  release:
+    needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'release'
     runs-on: ubuntu-latest
     
-    strategy:
-      matrix:
-        target: [x86_64-unknown-linux-gnu]
-        # Adicione mais targets se necessário:
-        # - x86_64-pc-windows-msvc
-        # - x86_64-apple-darwin
-        # - aarch64-unknown-linux-gnu
-    
     steps:
-    - name: Checkout código
-      uses: actions/checkout@v4
-    
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-        targets: ${{ matrix.target }}
-    
-    - name: Cache dependências
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
+    - uses: actions/checkout@v4
     
     - name: Build release
-      run: |
-        cargo build --release --target ${{ matrix.target }} --verbose
-        # Verifica se o binário foi criado
-        if [ -f "target/${{ matrix.target }}/release/$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')" ]; then
-          echo "✅ Build realizado com sucesso"
-        else
-          echo "❌ Binário não encontrado"
-          ls -la target/${{ matrix.target }}/release/
-          exit 1
-        fi
+      run: cargo build --release --verbose
     
-    - name: Extrair nome do binário
-      id: get-binary-name
-      run: |
-        BINARY_NAME=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')
-        echo "binary_name=$BINARY_NAME" >> $GITHUB_OUTPUT
-        echo "Versão: $(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')"
-    
-    - name: Preparar artifacts
-      run: |
-        BINARY_NAME="${{ steps.get-binary-name.outputs.binary_name }}"
-        TARGET="${{ matrix.target }}"
-        
-        # Cria diretório para artifacts
-        mkdir -p artifacts
-        
-        # Copia e renomeia o binário
-        if [ -f "target/$TARGET/release/$BINARY_NAME" ]; then
-          cp "target/$TARGET/release/$BINARY_NAME" "artifacts/${BINARY_NAME}-${TARGET}"
-          chmod +x "artifacts/${BINARY_NAME}-${TARGET}"
-        elif [ -f "target/$TARGET/release/$BINARY_NAME.exe" ]; then
-          cp "target/$TARGET/release/$BINARY_NAME.exe" "artifacts/${BINARY_NAME}-${TARGET}.exe"
-        fi
-        
-        # Lista artifacts gerados
-        echo "📦 Artifacts gerados:"
-        ls -la artifacts/
-    
-    - name: Upload artifacts para workflow
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: binaries-${{ matrix.target }}
-        path: artifacts/
-        retention-days: 7
+        name: ${{ github.event.repository.name }}-linux
+        path: target/release/
+        if-no-files-found: error
     
-    # Upload para GitHub Releases (só quando uma release é criada)
-    - name: Upload para GitHub Release
+    - name: Create GitHub Release
       if: github.event_name == 'release'
       uses: softprops/action-gh-release@v1
       with:
-        files: artifacts/*
-        draft: false
-        prerelease: false
+        files: target/release/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    # Cria um artifact com informações da build
-    - name: Criar arquivo de versão
-      run: |
-        echo "Build: ${{ github.run_number }}" > build-info.txt
-        echo "Commit: ${{ github.sha }}" >> build-info.txt
-        echo "Data: $(date)" >> build-info.txt
-        echo "Target: ${{ matrix.target }}" >> build-info.txt
-        echo "Versão: $(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')" >> build-info.txt
-        
-        # Upload do arquivo de versão
-        cp build-info.txt artifacts/
-    
-    # Notificação opcional (Slack, Discord, etc.)
-    - name: Notificar sucesso
-      if: success()
-      run: |
-        echo "✅ Build #${{ github.run_number }} concluída com sucesso!"
-        echo "📦 Binários disponíveis na aba Artifacts"
-        if [ "${{ github.event_name }}" = "release" ]; then
-          echo "🚀 Release publicado: ${{ github.event.release.tag_name }}"
-        fi
-
-  # Job para limpeza (opcional)
-  cleanup:
-    needs: [validate, build-release]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-    - name: Limpar cache se falhou
-      if: failure()
-      run: |
-        echo "🧹 Limpando cache devido a falha..."
-        # Remove o cache da execução atual
-        echo "Cache-ID: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}"
-      # Nota: O GitHub Actions gerencia automaticamente o cache,
-      # mas você pode forçar limpeza se necessário
