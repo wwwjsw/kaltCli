@@ -1,3 +1,5 @@
+[![Rust CI](https://github.com/wwwjsw/kaltCli/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/wwwjsw/kaltCli/actions/workflows/rust.yml)
+
 ## Run 
 `cargo run -- <path> <filename> <extension>`
 
